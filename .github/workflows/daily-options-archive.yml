@@ -1,0 +1,28 @@
+name: Daily Options Archive
+
+on:
+  schedule:
+    # 21:30 UTC = 4:30pm ET during EDT (summer), 5:30pm ET during EST (winter).
+    # Runs after the US market close either way; adjust if you need exact timing.
+    - cron: '30 21 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install -r requirements.txt
+
+      - run: python daily_options_archive.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: options-${{ github.run_id }}
+          path: options_archive/*.parquet
+          retention-days: 30
