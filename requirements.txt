@@ -1,8 +1,1 @@
-pandas>=2.0
-numpy>=1.24
-yfinance>=0.2.40
-requests>=2.31
-lxml>=5.0
-beautifulsoup4>=4.12
-html5lib>=1.1
-pyarrow>=14.0
+trading-shared-data @ git+https://github.com/GkolfosGeorge/shared-data-layer.git@v0.1.0
