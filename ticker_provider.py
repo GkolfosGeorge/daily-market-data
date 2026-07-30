@@ -28,6 +28,7 @@ import requests
 import json
 import re
 import time
+from io import StringIO
 from pathlib import Path
 from typing import Optional
 
@@ -171,7 +172,9 @@ def _scrape_tickers(index_name: str) -> list[str]:
 
     response = _download_with_retry(cfg["url"], headers=HEADERS)
 
-    tables = pd.read_html(response.text)
+    # Wrapped in StringIO: passing a raw string directly makes lxml treat it
+    # as a filename/URL instead of HTML content, raising OSError.
+    tables = pd.read_html(StringIO(response.text))
 
     if "table_index" in cfg:
         table = tables[cfg["table_index"]]
