@@ -1,0 +1,27 @@
+name: Daily Short Interest Archive
+
+on:
+  schedule:
+    - cron: '0 22 * * 2,5'   # Tuesday & Friday — see note in README on why not daily
+  workflow_dispatch:
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install -r requirements.txt
+
+      - run: python daily_short_interest_archive.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: short-interest-${{ github.run_id }}
+          path: short_interest_archive/*.parquet
+          retention-days: 90
+          if-no-files-found: ignore
