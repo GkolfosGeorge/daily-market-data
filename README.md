@@ -2,7 +2,8 @@
 
 Automated, GitHub Actions-driven collection of market data that would
 otherwise be lost or hard to reconstruct after the fact: options chain
-snapshots, FINRA short interest, and earnings surprise history.
+snapshots, FINRA short interest, earnings surprise history, and raw
+company news.
 
 ## What's here
 
@@ -11,17 +12,21 @@ daily_options_archive.py              → daily options chain (PCR, OI, IV per s
 daily_short_interest_archive.py       → FINRA consolidated short interest (twice/month source)
 backfill_short_interest_history.py    → one-off backfill of historical short interest (run locally)
 weekly_earnings_surprise_archive.py   → EPS estimate vs actual, accumulated beyond yfinance's ~4-quarter window
+daily_news_archive.py                 → daily raw company news (Finnhub, ticker-tagged, S&P 500)
 requirements.txt
 .github/workflows/
     daily-options-archive.yml
     daily-short-interest-archive.yml
     weekly-earnings-surprise-archive.yml
+    daily-news-archive.yml
 ```
 
-All three scanners rely on
+All scanners rely on
 [`trading-shared-data`](https://github.com/GkolfosGeorge/shared-data-layer)
 (pinned to a specific tag — see `requirements.txt`) for the ticker universe
-lookup. No vendored copies of shared modules live in this repo.
+lookup and the underlying scanner/archive modules. No vendored copies of
+shared modules live in this repo — this repo only holds the headless entry
+points that GitHub Actions runs on a schedule.
 
 ## Options chain archive
 
@@ -61,8 +66,29 @@ repo** via the workflow's own `GITHUB_TOKEN`, so the archive actually
 accumulates across runs instead of resetting on every fresh CI checkout.
 
 **Storage:** `earnings_surprise_archive/earnings_surprises.parquet` — **is**
-committed to the repo (the opposite of the two archives above — this file
+committed to the repo (the opposite of the archives above — this file
 *is* the permanent record, not a disposable daily snapshot).
+
+## News archive
+
+Raw, ticker-tagged company news via Finnhub's free company-news endpoint —
+headline, summary, source, url, and publish timestamp per article, for the
+full S&P 500. Runs daily (Mon-Fri). No sentiment scoring happens here: this
+is deliberately raw-only storage, so that sentiment methodology can change
+or improve later without having lost the original text.
+
+Each run re-fetches a 3-day lookback window (not just "today") as a safety
+net against a missed or failed cron run — the same article can legitimately
+appear in more than one day's file as a result. That redundancy is resolved
+at read time, not write time: `news_archive.load_news_archive()`
+deduplicates on Finnhub's own article id when concatenating multiple days.
+
+**Storage:** `news_archive/` — **not** committed (gitignored), same
+artifact-based flow as options and short interest.
+
+**Requires** the `FINNHUB_API_KEY` repository secret (Settings → Secrets
+and variables → Actions). Never hardcoded — the workflow injects it as an
+environment variable only for the duration of the run.
 
 ## Manually triggering any workflow
 
