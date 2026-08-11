@@ -1,6 +1,7 @@
 cache/
 options_archive/
 short_interest_archive/
+news_archive/
 .ipynb_checkpoints/
 __pycache__/
 *.pyc

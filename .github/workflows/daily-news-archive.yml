@@ -1,0 +1,37 @@
+name: Daily News Archive
+
+on:
+  schedule:
+    # 22:30 UTC, Mon-Fri — after US market close (adjust if you want a
+    # different time; cron is always UTC regardless of your local time).
+    - cron: "30 22 * * 1-5"
+  workflow_dispatch: {}   # allows manual "Run workflow" from the Actions tab
+
+jobs:
+  archive-news:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run news archiver
+        env:
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+        run: python daily_news_archive.py
+
+      - name: Upload news archive artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: news-archive-${{ github.run_id }}
+          path: news_archive/
+          retention-days: 30
