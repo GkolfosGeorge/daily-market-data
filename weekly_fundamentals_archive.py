@@ -21,6 +21,15 @@ Safe to re-run: fundamentals.upsert_fundamentals() is idempotent
 fiscal_period + form_type) — running this twice in the same week
 changes nothing the second time.
 
+Efficiency: uses skip_if_no_new_filing=True — for each ticker, first
+checks a lightweight SEC endpoint (a lit of recent filing dates, not
+the full companyfacts blob) against the most recent filed_date already
+on file, and skips the full download entirely if there's nothing new.
+Most weeks, most companies haven't filed anything since last run, so
+this avoids re-downloading multi-MB companyfacts JSON for no reason —
+the previous version without this check timed out at 90 minutes on
+GitHub's runners.
+
 Usage:
     python weekly_fundamentals_archive.py
 
@@ -43,15 +52,19 @@ def main():
     print(f"Universe: {UNIVERSE} -> {len(tickers)} tickers\n")
 
     engine = get_engine()
-    summary = ingest_fundamentals_for_universe(tickers, engine)
+    summary = ingest_fundamentals_for_universe(
+        tickers, engine, skip_if_no_new_filing=True
+    )
 
-    ok = summary[summary["status"] == "ok"]
-    total_inserted = int(ok["inserted"].sum()) if "inserted" in ok.columns else 0
-    problems = summary[summary["status"] != "ok"]
+    ok = summary[summary["status"].isin(["ok", "up_to_date"])]
+    total_inserted = int(summary.get("inserted", 0).sum()) if "inserted" in summary.columns else 0
+    up_to_date_count = (summary["status"] == "up_to_date").sum()
+    problems = summary[~summary["status"].isin(["ok", "up_to_date"])]
 
     print("\n── Summary ──────────────────────────────────")
     print(summary["status"].value_counts())
-    print(f"\nΣύνολο νέων rows αυτή την εβδομάδα: {total_inserted}")
+    print(f"\nΉδη up-to-date (skip, καμία λήψη): {up_to_date_count}")
+    print(f"Σύνολο νέων rows αυτή την εβδομάδα: {total_inserted}")
 
     if not problems.empty:
         print("\nTickers με προβλήματα (φυσιολογικό για μεμονωμένα no_cik/no_facts):")

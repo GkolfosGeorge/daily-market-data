@@ -12,9 +12,10 @@ name: Weekly Fundamentals Archive
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    # Γενναιόδωρο όριο -- ~500 tickers x (SEC fetch + rate-limit sleep)
-    # μπορεί εύκολα να φτάσει 20-40 λεπτά.
-    timeout-minutes: 90
+    # Γενναιόδωρο όριο -- ~500 tickers x πλήρες companyfacts JSON fetch
+    # (μεγάλες εταιρείες = αρκετά MB) σε GitHub-hosted runner μπορεί
+    # εύκολα να ξεπεράσει 1.5 ώρα.
+    timeout-minutes: 180
 
     steps:
       - uses: actions/checkout@v4
