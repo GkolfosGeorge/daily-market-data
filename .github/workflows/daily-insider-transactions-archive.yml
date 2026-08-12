@@ -1,0 +1,43 @@
+name: Daily Insider Transactions Archive
+
+# Form 4 must be filed within 2 business days of the transaction, so a
+# daily (weekday) cadence keeps the insider buying/selling signal close
+# to actionable — unlike fundamentals/earnings (inherently quarterly),
+# this is a continuous trickle, same rhythm as the news archiver.
+on:
+  schedule:
+    # 22:30 UTC, Mon-Fri — after US market close, same slot as daily-news-archive.
+    - cron: "30 22 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # needed to commit the accumulated archive back
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60   # generous — most days only a small subset of 768 tickers have new filings
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run insider transactions archiver
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python daily_insider_transactions_archive.py
+
+      - name: Commit updated archive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add insider_transactions_archive/insider_transactions.parquet
+          git diff --staged --quiet && echo "No new insider transactions this run" || git commit -m "Daily insider transactions update: $(date +%Y-%m-%d)"
+          git push
