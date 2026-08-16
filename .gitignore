@@ -6,3 +6,6 @@ news_archive/
 __pycache__/
 *.pyc
 .env
+backfill.log
+*.log
+

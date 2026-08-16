@@ -60,15 +60,18 @@ def main():
     start_time = time.time()
 
     for i, row in enumerate(universe.itertuples(index=False), 1):
+        print(f"  ({i}/{total}) {row.ticker}...", end=" ", flush=True)
+        t0 = time.time()
         try:
             df = fetch_transactions_for_ticker(row.ticker, row.cik, since_date=cutoff)
             if not df.empty:
                 frames.append(df)
+            print(f"{len(df)} rows  ({time.time()-t0:.1f}s)")
         except Exception as e:
             errors += 1
-            print(f"  ⚠️ {row.ticker}: {e}")
+            print(f"ERROR ({time.time()-t0:.1f}s): {e}")
 
-        if i % 20 == 0 or i == total:
+        if i % 5 == 0 or i == total:
             elapsed = time.time() - start_time
             rate = i / elapsed if elapsed > 0 else 0
             eta_min = (total - i) / rate / 60 if rate > 0 else float("nan")
@@ -78,7 +81,7 @@ def main():
                 f"elapsed={elapsed/60:.1f}m  eta={eta_min:.1f}m  (last: {row.ticker})"
             )
 
-            # Save incrementally every ~20 tickers so an interruption doesn't
+            # Save incrementally every 5 tickers so an interruption doesn't
             # lose progress — this is a long-running job.
             if frames:
                 combined = pd.concat(frames, ignore_index=True)
